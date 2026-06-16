@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'firebase_options.dart'; // Import file cấu hình bạn vừa tạo
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Khởi tạo Firebase chính thức
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MossApp());
 }
 
@@ -32,50 +39,62 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // Dữ liệu ban đầu (Môi trường lý tưởng)
+  // Trỏ thẳng đến nhánh dữ liệu hiện tại trên Firebase
+  final DatabaseReference _dbRef = FirebaseDatabase.instance.ref('sensors/current');
+  
   Map<String, dynamic> sensorData = {
-    "temperature": 26.0,
-    "humidity": 75.0, // Nằm trong khoảng sống lý tưởng 60-90% của Hypnum cupressiforme
-    "pm25": 12.0,     // Dưới 15 là an toàn
+    "temperature": 0.0,
+    "humidity": 0.0, 
+    "pm25": 0.0,
     "fan_status": "OFF",
     "humidifier_status": "OFF",
-    "moss_status": "Healthy"
+    "moss_status": "Loading..."
   };
 
   bool _hasShownPopup = false;
 
-  // Hàm mô phỏng việc nhận data xấu từ Firebase / AI
-  void _simulateEdgeAITrigger() {
-    setState(() {
-      sensorData['humidity'] = 52.0; // Tụt xuống dưới 60% -> Rêu khô
-      sensorData['moss_status'] = "Dehydrated"; // Nhận cờ từ module AI
-      sensorData['pm25'] = 65.0; // Vượt ngưỡng 55 -> Độc hại
-      sensorData['fan_status'] = "ON";
+  @override
+  void initState() {
+    super.initState();
+    // THE MAGIC: Lắng nghe luồng dữ liệu thời gian thực
+    _dbRef.onValue.listen((DatabaseEvent event) {
+      final data = event.snapshot.value as Map<dynamic, dynamic>?;
+
+      if (data != null) {
+        setState(() {
+          sensorData['temperature'] = (data['temperature'] ?? 0).toDouble();
+          sensorData['humidity'] = (data['humidity'] ?? 0).toDouble();
+          sensorData['pm25'] = (data['pm25'] ?? 0).toDouble();
+          sensorData['fan_status'] = data['fan_status'] ?? 'OFF';
+          sensorData['humidifier_status'] = data['humidifier_status'] ?? 'OFF';
+          sensorData['moss_status'] = data['moss_status'] ?? 'Unknown';
+        });
+        
+        _checkAlertLogic();
+      }
     });
-    
-    _checkAlertLogic();
   }
 
-  // TASK 2: Logic xử lý cảnh báo kết hợp Thông số Sinh học
+  // Logic xử lý cảnh báo kết hợp Thông số Sinh học
   void _checkAlertLogic() {
-    bool isDry = sensorData['humidity'] < 60.0 || sensorData['moss_status'] == 'Dehydrated';
+    bool isDry = sensorData['humidity'] > 0 && (sensorData['humidity'] < 60.0 || sensorData['moss_status'] == 'Dehydrated');
     
     if (isDry && !_hasShownPopup) {
       _hasShownPopup = true;
-      Future.delayed(const Duration(milliseconds: 300), () {
+      // Dùng Future.delayed để tránh lỗi hiện Dialog khi màn hình đang build
+      Future.delayed(Duration.zero, () {
         _showHumidifierPopup();
       });
     }
   }
 
-  // Hàm xác định màu cảnh báo PM2.5 dựa theo chuẩn WHO từ tài liệu
   Color _getPM25Color(double pm25) {
-    if (pm25 > 55.0) return Colors.redAccent; // Ngưỡng độc hại (Đỏ - Tím)
-    if (pm25 >= 35.0) return Colors.orangeAccent; // Cảnh báo / Kém (Vàng - Cam)
-    return Colors.cyanAccent; // Ngưỡng an toàn (Xanh)
+    if (pm25 == 0) return Colors.grey;
+    if (pm25 > 55.0) return Colors.redAccent; 
+    if (pm25 >= 35.0) return Colors.orangeAccent; 
+    return Colors.cyanAccent; 
   }
 
-  // Pop-up cảnh báo tự động
   void _showHumidifierPopup() {
     showDialog(
       context: context,
@@ -94,11 +113,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               borderRadius: BorderRadius.circular(24),
               border: Border.all(color: Colors.redAccent, width: 2),
               boxShadow: [
-                BoxShadow(
-                  color: Colors.redAccent.withOpacity(0.5),
-                  blurRadius: 30,
-                  spreadRadius: 5,
-                )
+                BoxShadow(color: Colors.redAccent.withOpacity(0.5), blurRadius: 30, spreadRadius: 5)
               ],
             ),
             child: Column(
@@ -106,13 +121,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 64),
                 const SizedBox(height: 16),
-                const Text(
-                  'CRITICAL BIOLOGY ALERT',
-                  style: TextStyle(color: Colors.redAccent, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1),
-                ),
+                const Text('CRITICAL BIOLOGY ALERT', style: TextStyle(color: Colors.redAccent, fontSize: 20, fontWeight: FontWeight.w900)),
                 const SizedBox(height: 12),
                 const Text(
-                  'Hypnum Moss hydration level is critically low (<60%). AI model detected "Dehydrated" state. Bio-filtration efficiency dropping.',
+                  'Hypnum Moss hydration level is critically low (<60%). Auto-activation required.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white70, fontSize: 15),
                 ),
@@ -120,16 +132,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.of(context).pop();
-                    setState(() {
-                      sensorData['humidifier_status'] = "ON";
-                      sensorData['humidity'] = 85.0; // Phục hồi lên 85% (Chuẩn của lớp nền Sphagnum)
-                      sensorData['moss_status'] = "Recovering";
-                      sensorData['pm25'] = 20.0; // Máy lọc chạy, bụi giảm
-                      _hasShownPopup = false; 
-                    });
+                    // Tạm thời ẩn cờ để không hiện liên tục, chờ data Firebase mới đè lên
+                    _hasShownPopup = false; 
                   },
                   icon: const Icon(Icons.water_drop, color: Colors.white),
-                  label: const Text('ACTIVATE HUMIDIFIER', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                  label: const Text('ACKNOWLEDGE', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.redAccent,
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -146,17 +153,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    bool isDry = sensorData['humidity'] < 60.0 || sensorData['moss_status'] == 'Dehydrated';
+    bool isDry = sensorData['humidity'] > 0 && (sensorData['humidity'] < 60.0 || sensorData['moss_status'] == 'Dehydrated');
     double pm25Value = sensorData['pm25'];
     Color pm25CardColor = _getPM25Color(pm25Value);
 
     return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _simulateEdgeAITrigger,
-        backgroundColor: Colors.tealAccent[400],
-        icon: const Icon(Icons.memory, color: Colors.black),
-        label: const Text('Simulate EdgeAI Data', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: RadialGradient(
@@ -179,7 +180,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       children: [
                         Text('MOSS ECOSYSTEM', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: Colors.greenAccent[400])),
                         const SizedBox(height: 4),
-                        Text('Bio-Parameters Synced', style: TextStyle(fontSize: 14, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+                        Text('Cloud Synced - Live', style: TextStyle(fontSize: 14, color: Colors.blueAccent, fontWeight: FontWeight.w500)),
                       ],
                     ),
                     Container(
@@ -190,7 +191,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 ),
                 const SizedBox(height: 30),
-                
                 Expanded(
                   child: GridView.count(
                     crossAxisCount: 2,
@@ -205,7 +205,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                 ),
-                
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 500),
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
@@ -219,11 +218,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
-                      BoxShadow(
-                        color: (isDry || pm25Value > 55.0 ? Colors.redAccent : Colors.greenAccent).withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      )
+                      BoxShadow(color: (isDry || pm25Value > 55.0 ? Colors.redAccent : Colors.greenAccent).withOpacity(0.3), blurRadius: 20, offset: const Offset(0, 10))
                     ],
                     border: Border.all(color: Colors.white.withOpacity(0.2), width: 1.5),
                   ),
@@ -233,9 +228,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: Text(
-                          isDry 
-                            ? 'SYSTEM ALERT: Moss dehydration detected' 
-                            : (pm25Value > 55.0 ? 'SYSTEM ALERT: Toxic PM2.5 levels' : 'System running optimally'),
+                          sensorData['humidity'] == 0 
+                            ? 'Connecting to Edge Device...' 
+                            : (isDry ? 'SYSTEM ALERT: Moss dehydration' : (pm25Value > 55.0 ? 'SYSTEM ALERT: Toxic PM2.5' : 'System running optimally')),
                           style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.5),
                         ),
                       ),
@@ -255,20 +250,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       duration: const Duration(milliseconds: 400),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF222834), Color(0xFF171A21)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: const LinearGradient(colors: [Color(0xFF222834), Color(0xFF171A21)], begin: Alignment.topLeft, end: Alignment.bottomRight),
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: activeColor.withOpacity(isWarning ? 0.4 : 0.15),
-            blurRadius: isWarning ? 25 : 15,
-            spreadRadius: isWarning ? 3 : 0,
-            offset: const Offset(0, 8),
-          )
-        ],
+        boxShadow: [BoxShadow(color: activeColor.withOpacity(isWarning ? 0.4 : 0.15), blurRadius: isWarning ? 25 : 15, spreadRadius: isWarning ? 3 : 0, offset: const Offset(0, 8))],
         border: Border.all(color: activeColor.withOpacity(isWarning ? 0.8 : 0.3), width: isWarning ? 2 : 1),
       ),
       child: Column(
@@ -279,8 +263,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Icon(icon, size: 32, color: activeColor),
-              if (isWarning) 
-                Icon(Icons.error_outline, size: 24, color: activeColor),
+              if (isWarning) Icon(Icons.error_outline, size: 24, color: activeColor),
             ],
           ),
           Column(
@@ -293,8 +276,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 textBaseline: TextBaseline.alphabetic,
                 children: [
                   Text(value, style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
-                  if (unit.isNotEmpty) 
-                    Text(' $unit', style: TextStyle(color: Colors.grey[500], fontSize: 16, fontWeight: FontWeight.bold)),
+                  if (unit.isNotEmpty) Text(' $unit', style: TextStyle(color: Colors.grey[500], fontSize: 16, fontWeight: FontWeight.bold)),
                 ],
               ),
             ],
