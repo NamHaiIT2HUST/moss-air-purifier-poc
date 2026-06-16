@@ -15,17 +15,13 @@ current_light = 300
 def generate_mock_data():
     global current_temp, current_hum, current_pm25, current_pm10, current_light
 
-    # 1. Đọc trạng thái thiết bị hiện tại
     fan_on = current_pm25 > 25.0
     humidifier_on = current_hum < 60.0
 
-    # 2. Logic phản hồi môi trường (Adaptive Control Simulation)
     if fan_on:
-        # Máy lọc đang chạy -> Bụi giảm nhanh
         current_pm25 += random.uniform(-2.5, -0.5)
         current_pm10 += random.uniform(-2.5, -0.5)
     else:
-        # Máy lọc tắt -> Bụi từ từ tăng lên (do rò rỉ từ ngoài vào)
         current_pm25 += random.uniform(0.1, 1.0)
         current_pm10 += random.uniform(0.1, 1.0)
 
@@ -33,14 +29,11 @@ def generate_mock_data():
         # Phun sương đang bật -> Độ ẩm tăng
         current_hum += random.uniform(0.5, 2.0)
     else:
-        # Phun sương tắt -> Rêu hút nước, môi trường khô dần -> Độ ẩm giảm
         current_hum += random.uniform(-0.8, -0.1)
 
-    # Nhiệt độ và ánh sáng dao động tự nhiên theo môi trường
     current_temp += random.uniform(-0.2, 0.2)
     current_light += random.randint(-15, 15)
 
-    # 3. Khóa giới hạn (Clamp) để số liệu luôn hợp lý
     current_temp = max(15.0, min(current_temp, 40.0))
     current_hum = max(30.0, min(current_hum, 90.0))
     current_pm25 = max(5.0, current_pm25)
