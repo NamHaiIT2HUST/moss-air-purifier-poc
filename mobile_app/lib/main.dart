@@ -31,12 +31,12 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProviderStateMixin {
+class _DashboardScreenState extends State<DashboardScreen> {
   // Dữ liệu ban đầu (Môi trường lý tưởng)
   Map<String, dynamic> sensorData = {
     "temperature": 26.0,
-    "humidity": 75.0, 
-    "pm25": 15.0,
+    "humidity": 75.0, // Nằm trong khoảng sống lý tưởng 60-90% của Hypnum cupressiforme
+    "pm25": 12.0,     // Dưới 15 là an toàn
     "fan_status": "OFF",
     "humidifier_status": "OFF",
     "moss_status": "Healthy"
@@ -47,16 +47,16 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   // Hàm mô phỏng việc nhận data xấu từ Firebase / AI
   void _simulateEdgeAITrigger() {
     setState(() {
-      sensorData['humidity'] = 52.0; // Tụt xuống dưới 60
-      sensorData['moss_status'] = "Dehydrated"; // Cờ cảnh báo từ module AI của Dương/Đồng
-      sensorData['pm25'] = 45.0; 
+      sensorData['humidity'] = 52.0; // Tụt xuống dưới 60% -> Rêu khô
+      sensorData['moss_status'] = "Dehydrated"; // Nhận cờ từ module AI
+      sensorData['pm25'] = 65.0; // Vượt ngưỡng 55 -> Độc hại
       sensorData['fan_status'] = "ON";
     });
     
     _checkAlertLogic();
   }
 
-  // TASK 2: Logic xử lý cảnh báo
+  // TASK 2: Logic xử lý cảnh báo kết hợp Thông số Sinh học
   void _checkAlertLogic() {
     bool isDry = sensorData['humidity'] < 60.0 || sensorData['moss_status'] == 'Dehydrated';
     
@@ -68,11 +68,18 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     }
   }
 
+  // Hàm xác định màu cảnh báo PM2.5 dựa theo chuẩn WHO từ tài liệu
+  Color _getPM25Color(double pm25) {
+    if (pm25 > 55.0) return Colors.redAccent; // Ngưỡng độc hại (Đỏ - Tím)
+    if (pm25 >= 35.0) return Colors.orangeAccent; // Cảnh báo / Kém (Vàng - Cam)
+    return Colors.cyanAccent; // Ngưỡng an toàn (Xanh)
+  }
+
   // Pop-up cảnh báo tự động
   void _showHumidifierPopup() {
     showDialog(
       context: context,
-      barrierDismissible: false, // Bắt buộc người dùng/hệ thống phải phản hồi
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
           backgroundColor: Colors.transparent,
@@ -100,25 +107,25 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                 const Icon(Icons.warning_amber_rounded, color: Colors.redAccent, size: 64),
                 const SizedBox(height: 16),
                 const Text(
-                  'CRITICAL ALERT',
-                  style: TextStyle(color: Colors.redAccent, fontSize: 22, fontWeight: FontWeight.w900, letterSpacing: 2),
+                  'CRITICAL BIOLOGY ALERT',
+                  style: TextStyle(color: Colors.redAccent, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1),
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Moss hydration level is critically low. AI model detected "Dehydrated" state.',
+                  'Hypnum Moss hydration level is critically low (<60%). AI model detected "Dehydrated" state. Bio-filtration efficiency dropping.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, fontSize: 16),
+                  style: TextStyle(color: Colors.white70, fontSize: 15),
                 ),
                 const SizedBox(height: 24),
-                // Nút kích hoạt (Mô phỏng lệnh điều khiển)
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.of(context).pop();
                     setState(() {
                       sensorData['humidifier_status'] = "ON";
-                      sensorData['humidity'] = 65.0; // Phục hồi độ ẩm
+                      sensorData['humidity'] = 85.0; // Phục hồi lên 85% (Chuẩn của lớp nền Sphagnum)
                       sensorData['moss_status'] = "Recovering";
-                      _hasShownPopup = false; // Reset cờ
+                      sensorData['pm25'] = 20.0; // Máy lọc chạy, bụi giảm
+                      _hasShownPopup = false; 
                     });
                   },
                   icon: const Icon(Icons.water_drop, color: Colors.white),
@@ -140,7 +147,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     bool isDry = sensorData['humidity'] < 60.0 || sensorData['moss_status'] == 'Dehydrated';
-    bool isDusty = sensorData['pm25'] > 25.0;
+    double pm25Value = sensorData['pm25'];
+    Color pm25CardColor = _getPM25Color(pm25Value);
 
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
@@ -171,7 +179,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                       children: [
                         Text('MOSS ECOSYSTEM', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 1.2, color: Colors.greenAccent[400])),
                         const SizedBox(height: 4),
-                        Text('Edge AI Active', style: TextStyle(fontSize: 14, color: Colors.grey[500], fontWeight: FontWeight.w500)),
+                        Text('Bio-Parameters Synced', style: TextStyle(fontSize: 14, color: Colors.grey[500], fontWeight: FontWeight.w500)),
                       ],
                     ),
                     Container(
@@ -190,8 +198,8 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     mainAxisSpacing: 20,
                     childAspectRatio: 0.85,
                     children: [
-                      _buildPremiumCard('PM 2.5', '${sensorData['pm25']}', 'µg/m³', Icons.air, isDusty, null),
-                      _buildPremiumCard('Humidity', '${sensorData['humidity']}', '%', Icons.water_drop, isDry, null),
+                      _buildPremiumCard('PM 2.5', '$pm25Value', 'µg/m³', Icons.air, pm25Value >= 35.0, pm25CardColor),
+                      _buildPremiumCard('Humidity', '${sensorData['humidity']}', '%', Icons.water_drop, isDry, isDry ? Colors.redAccent : Colors.cyanAccent),
                       _buildPremiumCard('Temperature', '${sensorData['temperature']}', '°C', Icons.thermostat, false, Colors.orangeAccent),
                       _buildPremiumCard('Moss Health', sensorData['moss_status'], '', Icons.health_and_safety, isDry, isDry ? Colors.redAccent : Colors.greenAccent),
                     ],
@@ -203,7 +211,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: isDry 
+                      colors: isDry || pm25Value > 55.0
                           ? [Colors.redAccent.withOpacity(0.8), Colors.red.withOpacity(0.2)]
                           : [Colors.greenAccent.withOpacity(0.8), Colors.teal.withOpacity(0.2)],
                       begin: Alignment.topLeft,
@@ -212,7 +220,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: (isDry ? Colors.redAccent : Colors.greenAccent).withOpacity(0.3),
+                        color: (isDry || pm25Value > 55.0 ? Colors.redAccent : Colors.greenAccent).withOpacity(0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       )
@@ -221,11 +229,13 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
                   ),
                   child: Row(
                     children: [
-                      Icon(isDry ? Icons.warning_rounded : Icons.check_circle_outline, color: Colors.white, size: 28),
+                      Icon(isDry || pm25Value > 55.0 ? Icons.warning_rounded : Icons.check_circle_outline, color: Colors.white, size: 28),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Text(
-                          isDry ? 'SYSTEM ALERT: Critical state detected' : 'System running optimally',
+                          isDry 
+                            ? 'SYSTEM ALERT: Moss dehydration detected' 
+                            : (pm25Value > 55.0 ? 'SYSTEM ALERT: Toxic PM2.5 levels' : 'System running optimally'),
                           style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700, letterSpacing: 0.5),
                         ),
                       ),
@@ -240,15 +250,13 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
     );
   }
 
-  Widget _buildPremiumCard(String title, String value, String unit, IconData icon, bool isWarning, Color? overrideColor) {
-    Color activeColor = overrideColor ?? (isWarning ? Colors.redAccent : Colors.cyanAccent);
-    
+  Widget _buildPremiumCard(String title, String value, String unit, IconData icon, bool isWarning, Color activeColor) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 400),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [const Color(0xFF222834), const Color(0xFF171A21)],
+        gradient: const LinearGradient(
+          colors: [Color(0xFF222834), Color(0xFF171A21)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -272,7 +280,7 @@ class _DashboardScreenState extends State<DashboardScreen> with SingleTickerProv
             children: [
               Icon(icon, size: 32, color: activeColor),
               if (isWarning) 
-                const Icon(Icons.error_outline, size: 24, color: Colors.redAccent),
+                Icon(Icons.error_outline, size: 24, color: activeColor),
             ],
           ),
           Column(
