@@ -5,6 +5,8 @@
 #include "sht31.h" 
 #include "dummy_ai.h" 
 #include "wifi_manager.h"
+#include "firebase_sync.h"
+#include "esp_system.h"
 
 static const char *TAG = "EDGE_CORE";
 
@@ -32,11 +34,17 @@ void edge_ai_task(void *pvParameter) {
 void app_main(void) {
     ESP_LOGI(TAG, "--- STARTING MOSS AIR PURIFIER EDGE AI ---");
 
+    // In ra tổng lượng RAM còn trống của toàn hệ thống trước khi chạy Task
+    ESP_LOGW(TAG, "Free Heap Size BEFORE starting tasks: %d bytes", esp_get_free_heap_size());
+
     // Tên wifi, mật khẩu wifi
     wifi_init_sta("NDNH", "23092005");
 
     xTaskCreate(&sensor_read_task, "sensor_task", 4096, NULL, 5, NULL);
     xTaskCreate(&edge_ai_task, "ai_task", 4096, NULL, 4, NULL); 
-    
-    // Tương lai: xTaskCreate cho Firebase Data Pipeline sẽ đặt ở đây
+    xTaskCreate(&firebase_sync_task, "firebase_task", 6144, NULL, 3, NULL);
+
+    // In ra tổng lượng RAM còn lại sau khi các luồng đã chia nhau bộ nhớ
+    ESP_LOGW(TAG, "Free Heap Size AFTER starting tasks: %d bytes", esp_get_free_heap_size());
+
 }
