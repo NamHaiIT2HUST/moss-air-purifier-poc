@@ -1,6 +1,7 @@
 #include "dummy_ai.h"
 #include "esp_log.h"
 #include <string.h>
+#include "actuators.h"
 
 static const char *TAG = "EDGE_AI_INFERENCE";
 

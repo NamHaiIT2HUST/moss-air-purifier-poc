@@ -46,6 +46,7 @@ void app_main(void) {
     xTaskCreate(&sensor_read_task, "sensor_task", 4096, NULL, 5, NULL);
     xTaskCreate(&edge_ai_task, "ai_task", 4096, NULL, 4, NULL); 
     xTaskCreate(&firebase_sync_task, "firebase_task", 6144, NULL, 3, NULL);
+    xTaskCreate(&firebase_receive_task, "firebase_cmd", 6144, NULL, 3, NULL);
 
     // In ra tổng lượng RAM còn lại sau khi các luồng đã chia nhau bộ nhớ
     ESP_LOGW(TAG, "Free Heap Size AFTER starting tasks: %lu bytes", esp_get_free_heap_size());
