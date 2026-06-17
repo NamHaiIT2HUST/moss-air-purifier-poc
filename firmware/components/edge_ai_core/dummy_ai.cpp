@@ -29,4 +29,8 @@ extern "C" void run_dummy_ai_inference(sensor_data_t *current_data, ai_decision_
 
     ESP_LOGI(TAG, "Inference Result -> Status: %s | Humidifier: %d | Fan: %d", 
              decision->moss_status, decision->trigger_humidifier, decision->trigger_fan);
+
+    // Gọi lệnh điều khiển phần cứng thực tế
+    control_fan(decision->trigger_fan);
+    control_humidifier(decision->trigger_humidifier);
 }
