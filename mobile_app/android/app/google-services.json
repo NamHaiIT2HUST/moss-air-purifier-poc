@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "284740788",
+    "firebase_url": "https://moss-poc-e14fe-default-rtdb.firebaseio.com",
+    "project_id": "moss-poc-e14fe",
+    "storage_bucket": "moss-poc-e14fe.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:284740788:android:5283780f17857d5c9a5be1",
+        "android_client_info": {
+          "package_name": "com.example.mobile_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD8VBVcqs3do6mwayGTmKkSaRd04JbhvYM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
