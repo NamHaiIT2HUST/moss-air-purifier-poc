@@ -3,20 +3,27 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 #include "sht31.h" 
-
+#include "dummy_ai.h" 
 static const char *TAG = "EDGE_CORE";
 
 sensor_data_t live_data = { .temperature = 28.0, .humidity = 70.0, .pm25 = 15.0 };
-bool fan_active = false;
-bool humidifier_active = false;
+ai_decision_t system_decision = { .moss_status = "Loading", .trigger_humidifier = false, .trigger_fan = false };
 
 void sensor_read_task(void *pvParameter) {
-    hardware_sensors_init(); // Khởi tạo I2C từ Component
+    hardware_sensors_init(); 
 
     while(1) {
-        read_hybrid_sensors(&live_data, fan_active, humidifier_active);
+        read_hybrid_sensors(&live_data, system_decision.trigger_fan, system_decision.trigger_humidifier);
         
         vTaskDelay(2000 / portTICK_PERIOD_MS); 
+    }
+}
+
+void edge_ai_task(void *pvParameter) {
+    while(1) {
+        run_dummy_ai_inference(&live_data, &system_decision);
+        
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -24,6 +31,7 @@ void app_main(void) {
     ESP_LOGI(TAG, "--- STARTING MOSS AIR PURIFIER EDGE AI ---");
 
     xTaskCreate(&sensor_read_task, "sensor_task", 4096, NULL, 5, NULL);
+    xTaskCreate(&edge_ai_task, "ai_task", 4096, NULL, 4, NULL); 
     
-    // Tương lai: xTaskCreate cho AI và Firebase sẽ đặt ở đây
+    // Tương lai: xTaskCreate cho Firebase Data Pipeline sẽ đặt ở đây
 }
