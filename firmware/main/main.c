@@ -38,7 +38,7 @@ void app_main(void) {
     ESP_LOGW(TAG, "Free Heap Size BEFORE starting tasks: %d bytes", esp_get_free_heap_size());
 
     // Tên wifi, mật khẩu wifi
-    wifi_init_sta("NDNH", "23092005");
+    wifi_init_sta("Repeater", "22222222");
 
     xTaskCreate(&sensor_read_task, "sensor_task", 4096, NULL, 5, NULL);
     xTaskCreate(&edge_ai_task, "ai_task", 4096, NULL, 4, NULL); 

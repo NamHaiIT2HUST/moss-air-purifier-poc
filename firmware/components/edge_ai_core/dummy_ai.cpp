@@ -4,7 +4,7 @@
 
 static const char *TAG = "EDGE_AI_INFERENCE";
 
-void run_dummy_ai_inference(sensor_data_t *current_data, ai_decision_t *decision) {
+extern "C" void run_dummy_ai_inference(sensor_data_t *current_data, ai_decision_t *decision) {
     ESP_LOGI(TAG, "Running Inference on Edge...");
 
     if (current_data->humidity < 60.0) {
