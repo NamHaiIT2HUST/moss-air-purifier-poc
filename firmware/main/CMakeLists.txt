@@ -1,3 +1,3 @@
 idf_component_register(SRCS "main.c"
                        INCLUDE_DIRS ""
-                       REQUIRES hardware_drivers edge_ai_core) 
+                       REQUIRES hardware_drivers edge_ai_core data_pipeline) 

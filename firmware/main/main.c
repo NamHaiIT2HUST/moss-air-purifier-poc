@@ -4,6 +4,8 @@
 #include "esp_log.h"
 #include "sht31.h" 
 #include "dummy_ai.h" 
+#include "wifi_manager.h"
+
 static const char *TAG = "EDGE_CORE";
 
 sensor_data_t live_data = { .temperature = 28.0, .humidity = 70.0, .pm25 = 15.0 };
@@ -29,6 +31,9 @@ void edge_ai_task(void *pvParameter) {
 
 void app_main(void) {
     ESP_LOGI(TAG, "--- STARTING MOSS AIR PURIFIER EDGE AI ---");
+
+    // Tên wifi, mật khẩu wifi
+    wifi_init_sta("NDNH", "23092005");
 
     xTaskCreate(&sensor_read_task, "sensor_task", 4096, NULL, 5, NULL);
     xTaskCreate(&edge_ai_task, "ai_task", 4096, NULL, 4, NULL); 
