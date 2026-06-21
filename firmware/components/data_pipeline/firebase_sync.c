@@ -8,6 +8,7 @@
 #include <string.h>
 #include "sht31.h" 
 #include "dummy_ai.h" 
+#include "actuators.h"
 
 static const char *TAG = "FIREBASE_SYNC";
 
@@ -72,5 +73,39 @@ void firebase_sync_task(void *pvParameter) {
         esp_http_client_cleanup(push_client);
 
         vTaskDelay(3000 / portTICK_PERIOD_MS); 
+    }
+}
+
+void firebase_receive_task(void *pvParameters) {
+    char local_response_buffer[256] = {0};
+
+    while (1) {
+        esp_http_client_config_t config = {
+            .url = "https://moss-poc-e14fe-default-rtdb.firebaseio.com/commands.json",
+            .transport_type = HTTP_TRANSPORT_OVER_SSL,
+            .crt_bundle_attach = esp_crt_bundle_attach,
+        };
+        esp_http_client_handle_t client = esp_http_client_init(&config);
+        esp_http_client_set_method(client, HTTP_METHOD_GET);
+
+        esp_err_t err = esp_http_client_perform(client);
+        if (err == ESP_OK) {
+            int len = esp_http_client_read_response(client, local_response_buffer, sizeof(local_response_buffer) - 1);
+            if (len > 0) {
+                local_response_buffer[len] = '\0';
+
+                if (strstr(local_response_buffer, "\"force_humidifier\":true")) {
+                    ESP_LOGW(TAG, "RECEIVED COMMAND FROM APP: Force Humidifier ON!");
+                    control_humidifier(true);
+                }
+                if (strstr(local_response_buffer, "\"force_fan\":true")) {
+                    ESP_LOGW(TAG, "RECEIVED COMMAND FROM APP: Force Fan ON!");
+                    control_fan(true);
+                }
+            }
+        }
+        esp_http_client_cleanup(client);
+
+        vTaskDelay(3000 / portTICK_PERIOD_MS);
     }
 }
