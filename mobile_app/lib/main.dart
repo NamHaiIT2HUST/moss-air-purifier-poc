@@ -236,7 +236,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ],
                   ),
-                )
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Nút Ép Phun Sương
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.water_drop, color: Colors.white),
+                        label: const Text('ÉP PHUN SƯƠNG', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueAccent.withOpacity(0.8),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        onPressed: () async {
+                          await FirebaseDatabase.instance.ref('commands').update({
+                            'force_humidifier': true,
+                            'force_fan': false,
+                          });
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    // Nút Ép Bật Quạt
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.air, color: Colors.white),
+                        label: const Text('ÉP BẬT QUẠT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orangeAccent.withOpacity(0.8),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                        onPressed: () async {
+                          await FirebaseDatabase.instance.ref('commands').update({
+                            'force_humidifier': false,
+                            'force_fan': true,
+                          });
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
