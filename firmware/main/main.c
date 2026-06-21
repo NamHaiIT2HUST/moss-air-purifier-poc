@@ -33,7 +33,14 @@ void edge_ai_task(void *pvParameter) {
 }
 
 void app_main(void) {
-    ESP_LOGI(TAG, "--- STARTING MOSS AIR PURIFIER EDGE AI ---");
+    esp_log_level_set("*", ESP_LOG_ERROR);
+
+    esp_log_level_set("EDGE_CORE", ESP_LOG_INFO);
+    esp_log_level_set("ACTUATORS", ESP_LOG_INFO);
+    esp_log_level_set("EDGE_AI_INFERENCE", ESP_LOG_INFO);
+    esp_log_level_set("FIREBASE_SYNC", ESP_LOG_WARN);
+
+    ESP_LOGI("EDGE_CORE", "--- STARTING MOSS AIR PURIFIER EDGE AI ---");
 
     actuators_init();
 
