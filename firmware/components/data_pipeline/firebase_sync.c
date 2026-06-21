@@ -9,6 +9,7 @@
 #include "sht31.h" 
 #include "dummy_ai.h" 
 #include "actuators.h"
+#include "cJSON.h"
 
 static const char *TAG = "FIREBASE_SYNC";
 
@@ -92,15 +93,28 @@ void firebase_receive_task(void *pvParameters) {
         if (err == ESP_OK) {
             int len = esp_http_client_read_response(client, local_response_buffer, sizeof(local_response_buffer) - 1);
             if (len > 0) {
-                local_response_buffer[len] = '\0';
+                local_response_buffer[len] = '\0'; 
 
-                if (strstr(local_response_buffer, "\"force_humidifier\":true")) {
-                    ESP_LOGW(TAG, "RECEIVED COMMAND FROM APP: Force Humidifier ON!");
-                    control_humidifier(true);
-                }
-                if (strstr(local_response_buffer, "\"force_fan\":true")) {
-                    ESP_LOGW(TAG, "RECEIVED COMMAND FROM APP: Force Fan ON!");
-                    control_fan(true);
+                cJSON *root = cJSON_Parse(local_response_buffer);
+                
+                if (root != NULL) {
+                    cJSON *force_humidifier = cJSON_GetObjectItem(root, "force_humidifier");
+                    if (cJSON_IsBool(force_humidifier)) {
+                        bool state = cJSON_IsTrue(force_humidifier);
+                        ESP_LOGW(TAG, "JSON PARSED -> Humidifier Command: %s", state ? "ON" : "OFF");
+                        control_humidifier(state);
+                    }
+
+                    cJSON *force_fan = cJSON_GetObjectItem(root, "force_fan");
+                    if (cJSON_IsBool(force_fan)) {
+                        bool state = cJSON_IsTrue(force_fan);
+                        ESP_LOGW(TAG, "JSON PARSED -> Fan Command: %s", state ? "ON" : "OFF");
+                        control_fan(state);
+                    }
+
+                    cJSON_Delete(root); 
+                } else {
+                    ESP_LOGE(TAG, "Failed to parse JSON string");
                 }
             }
         }

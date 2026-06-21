@@ -3,6 +3,29 @@
 #include <string.h>
 #include "actuators.h"
 
+// ==============================================================
+// --- KHUNG KIẾN TRÚC TENSORFLOW LITE MICRO (SẴN SÀNG NHÚNG) ---
+// ==============================================================
+/*
+#include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
+#include "tensorflow/lite/micro/micro_interpreter.h"
+#include "tensorflow/lite/schema/schema_generated.h"
+
+// 1. Chứa file mảng byte của Model thật
+// #include "moss_model_data.h" 
+
+// 2. Cấp phát vùng nhớ RAM tĩnh (Arena) cho Neural Network (VD: 15KB)
+constexpr int kTensorArenaSize = 15 * 1024;
+uint8_t tensor_arena[kTensorArenaSize];
+
+// 3. Khai báo các con trỏ toàn cục của TFLite
+const tflite::Model* model = nullptr;
+tflite::MicroInterpreter* interpreter = nullptr;
+TfLiteTensor* input = nullptr;
+TfLiteTensor* output = nullptr;
+*/
+// ==============================================================
+
 static const char *TAG = "EDGE_AI_INFERENCE";
 
 extern "C" void run_dummy_ai_inference(sensor_data_t *current_data, ai_decision_t *decision) {
