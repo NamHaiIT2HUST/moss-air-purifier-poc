@@ -8,6 +8,7 @@
 #include "firebase_sync.h"
 #include "esp_system.h"
 #include "actuators.h" 
+#include "esp_log.h"
 
 static const char *TAG = "EDGE_CORE";
 
@@ -42,6 +43,7 @@ void app_main(void) {
 
     ESP_LOGI("EDGE_CORE", "--- STARTING MOSS AIR PURIFIER EDGE AI ---");
 
+    edge_ai_init();
     actuators_init();
 
     // In ra tổng lượng RAM còn trống của toàn hệ thống trước khi chạy Task

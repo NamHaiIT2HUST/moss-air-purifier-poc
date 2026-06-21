@@ -3,31 +3,59 @@
 #include <string.h>
 #include "actuators.h"
 
+static const char *TAG = "EDGE_AI_INFERENCE";
+
 // ==============================================================
-// --- KHUNG KIẾN TRÚC TENSORFLOW LITE MICRO (SẴN SÀNG NHÚNG) ---
+// KHUNG KHỞI TẠO TENSORFLOW LITE MICRO (Chờ file model)
 // ==============================================================
 /*
 #include "tensorflow/lite/micro/micro_mutable_op_resolver.h"
 #include "tensorflow/lite/micro/micro_interpreter.h"
 #include "tensorflow/lite/schema/schema_generated.h"
 
-// 1. Chứa file mảng byte của Model thật
+// File mảng byte của model
 // #include "moss_model_data.h" 
 
-// 2. Cấp phát vùng nhớ RAM tĩnh (Arena) cho Neural Network (VD: 15KB)
+const tflite::Model* g_model = nullptr;
+tflite::MicroInterpreter* g_interpreter = nullptr;
+TfLiteTensor* g_input = nullptr;
+TfLiteTensor* g_output = nullptr;
+
+// Cấp phát 15KB RAM tĩnh cho AI
 constexpr int kTensorArenaSize = 15 * 1024;
 uint8_t tensor_arena[kTensorArenaSize];
-
-// 3. Khai báo các con trỏ toàn cục của TFLite
-const tflite::Model* model = nullptr;
-tflite::MicroInterpreter* interpreter = nullptr;
-TfLiteTensor* input = nullptr;
-TfLiteTensor* output = nullptr;
 */
-// ==============================================================
 
-static const char *TAG = "EDGE_AI_INFERENCE";
+// Bọc extern "C" để file main.c (thuần C) có thể gọi được lúc khởi động
+extern "C" void edge_ai_init() {
+    ESP_LOGI(TAG, "Initializing Edge AI Hardware & Memory...");
+    
+    /*
+    g_model = tflite::GetModel(g_moss_model_data);
+    
+    // Đăng ký các phép toán
+    static tflite::MicroMutableOpResolver<3> resolver;
+    resolver.AddFullyConnected();
+    resolver.AddRelu();
+    resolver.AddSoftmax();
 
+    // Khởi tạo bộ thông dịch AI
+    static tflite::MicroInterpreter static_interpreter(
+        g_model, resolver, tensor_arena, kTensorArenaSize);
+    g_interpreter = &static_interpreter;
+    
+    // Phân bổ bộ nhớ
+    g_interpreter->AllocateTensors();
+    
+    // Gắn trỏ vào ngõ vào/ngõ ra
+    g_input = g_interpreter->input(0);
+    g_output = g_interpreter->output(0);
+    
+    ESP_LOGI(TAG, "TensorFlow Lite Micro loaded successfully!");
+    */
+}
+
+// Luồng Dummy hiện tại - Sẽ được thay thế bằng g_interpreter->Invoke() khi có model
 extern "C" void run_dummy_ai_inference(sensor_data_t *current_data, ai_decision_t *decision) {
     ESP_LOGI(TAG, "Running Inference on Edge...");
 

@@ -13,6 +13,8 @@ typedef struct {
     bool trigger_fan;
 } ai_decision_t;
 
+void edge_ai_init();
+
 void run_dummy_ai_inference(sensor_data_t *current_data, ai_decision_t *decision);
 
 #ifdef __cplusplus
